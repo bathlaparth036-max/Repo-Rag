@@ -1,6 +1,6 @@
 """Unit and integration tests for RepoRAG FastAPI backend."""
 import pytest
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)

@@ -24,6 +24,8 @@ backend/venv/
 backend/.pytest_cache/
 demo-buggy-repo/.pytest_cache/
 backend/data/
+data/
+*/data/
 *.egg-info/
 
 # ============================================================
