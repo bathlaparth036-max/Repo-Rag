@@ -1,0 +1,32 @@
+# Environment & Secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+backend/venv/
+backend/.pytest_cache/
+backend/data/
+*.egg-info/
+dist/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.cache/
+*.tsbuildinfo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
