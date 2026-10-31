@@ -1,4 +1,4 @@
-"""Universal LLM Client supporting Grok (xAI), Google Gemini, and OpenAI."""
+"""Universal LLM Client supporting Groq, Grok (xAI), Google Gemini, and OpenAI."""
 from typing import Optional, Dict, Any, List
 import httpx
 from app.core.config import settings
@@ -6,7 +6,7 @@ from app.core.logging import logger
 
 
 class LLMClient:
-    """Unified client for invoking Grok (xAI), Gemini, or OpenAI."""
+    """Unified client for invoking Groq, Grok (xAI), Gemini, or OpenAI."""
 
     def __init__(
         self,
@@ -22,15 +22,10 @@ class LLMClient:
     def api_key(self) -> Optional[str]:
         if self._custom_key:
             return self._custom_key
-        if self.provider == "grok" or "grok" in self.model.lower():
-            return settings.GROK_API_KEY or settings.XAI_API_KEY
-        elif self.provider == "gemini":
-            return settings.GEMINI_API_KEY
-        elif self.provider == "openai":
-            return settings.OPENAI_API_KEY
-        # Fallback to any available key
+        # Check Groq / Grok / xAI keys
         return (
-            settings.GROK_API_KEY
+            getattr(settings, "GROQ_API_KEY", None)
+            or settings.GROK_API_KEY
             or settings.XAI_API_KEY
             or settings.GEMINI_API_KEY
             or settings.OPENAI_API_KEY
@@ -53,16 +48,77 @@ class LLMClient:
         if not self.is_configured():
             return None
 
-        # Auto-route to Grok if model is grok or provider is grok
+        key = self.api_key or ""
         active_provider = self.provider
-        if "grok" in self.model.lower() or active_provider == "grok":
+
+        # Auto-detect Groq keys (prefixed with gsk_)
+        if key.startswith("gsk_") or active_provider == "groq":
+            return await self._call_groq(prompt, temperature, max_tokens, system_prompt, timeout)
+
+        # Auto-route to xAI Grok
+        if "grok" in self.model.lower() or active_provider == "grok" or key.startswith("xai-") or key.startswith("grok_"):
             return await self._call_grok(prompt, temperature, max_tokens, system_prompt, timeout)
-        elif active_provider == "gemini":
+
+        if active_provider == "gemini":
             return await self._call_gemini(prompt, temperature, max_tokens, timeout)
-        elif active_provider == "openai":
+
+        if active_provider == "openai":
             return await self._call_openai(prompt, temperature, max_tokens, system_prompt, timeout)
-        else:
-            return await self._call_grok(prompt, temperature, max_tokens, system_prompt, timeout)
+
+        # Fallback based on key signature
+        if key.startswith("gsk_"):
+            return await self._call_groq(prompt, temperature, max_tokens, system_prompt, timeout)
+        return await self._call_grok(prompt, temperature, max_tokens, system_prompt, timeout)
+
+    async def _call_groq(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        system_prompt: Optional[str],
+        timeout: float,
+    ) -> Optional[str]:
+        """Call Groq API (api.groq.com) with fast inference."""
+        key = self.api_key
+        if not key:
+            return None
+
+        model = self.model
+        if model in ("grok-2-latest", "gemini-3.8-flash") or not model or "grok" in model:
+            model = "openai/gpt-oss-120b"
+
+        messages: List[Dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        content = choices[0].get("message", {}).get("content", "")
+                        logger.info(f"Groq ({model}) successfully generated response ({len(content)} chars)")
+                        return content
+                else:
+                    logger.warning(f"Groq API error HTTP {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            logger.warning(f"Groq API call failed: {e}")
+        return None
 
     async def _call_grok(
         self,

@@ -346,7 +346,7 @@ class BugDetector:
 
     async def _llm_code_analysis(self, file_contents: Dict[str, str]) -> List[DetectedBug]:
         """Use LLM to analyze code for bugs through reasoning."""
-        if not self.gemini_api_key:
+        if not self.llm.is_configured():
             return []
 
         bugs = []

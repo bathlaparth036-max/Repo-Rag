@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "chrome-extension://*",
@@ -28,9 +32,10 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[str] = None
 
     # LLM Settings
-    LLM_PROVIDER: str = "grok"  # grok, gemini, openai, local
+    LLM_PROVIDER: str = "grok"  # grok, groq, gemini, openai, local
     GROK_API_KEY: Optional[str] = None
     XAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     DEFAULT_MODEL: str = "grok-2-latest"
