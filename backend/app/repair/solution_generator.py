@@ -15,11 +15,14 @@ from app.core.logging import logger
 import httpx
 
 
+from app.core.llm import LLMClient
+
+
 class SolutionGenerator:
     """Generates multiple candidate solutions for a detected bug."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
-        self.gemini_api_key = gemini_api_key or settings.GEMINI_API_KEY
+    def __init__(self, api_key: Optional[str] = None):
+        self.llm = LLMClient(api_key=api_key)
 
     async def generate_solutions(
         self,
@@ -35,7 +38,7 @@ class SolutionGenerator:
         if not source_content:
             return []
 
-        if self.gemini_api_key:
+        if self.llm.is_configured():
             # Generate LLM-based solutions
             for i, hypothesis in enumerate(hypotheses[:max_solutions]):
                 solution = await self._llm_generate_solution(
@@ -103,20 +106,11 @@ MODIFIED_FILE_END
 """
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.DEFAULT_MODEL}:generateContent?key={self.gemini_api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.15, "maxOutputTokens": 8192}
-            }
-            async with httpx.AsyncClient(timeout=45.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-
-                    return self._parse_llm_solution(
-                        text, bug, hypothesis, source_content, solution_number
-                    )
+            text = await self.llm.generate(prompt, temperature=0.15, max_tokens=8192)
+            if text:
+                return self._parse_llm_solution(
+                    text, bug, hypothesis, source_content, solution_number
+                )
         except Exception as e:
             logger.warning(f"LLM solution generation failed: {e}")
 

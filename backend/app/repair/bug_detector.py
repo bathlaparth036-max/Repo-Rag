@@ -19,11 +19,14 @@ from app.core.logging import logger
 import httpx
 
 
+from app.core.llm import LLMClient
+
+
 class BugDetector:
     """Detects real bugs using multiple analysis strategies."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
-        self.gemini_api_key = gemini_api_key or settings.GEMINI_API_KEY
+    def __init__(self, api_key: Optional[str] = None):
+        self.llm = LLMClient(api_key=api_key)
 
     async def detect_bugs(
         self,
@@ -56,7 +59,7 @@ class BugDetector:
             bugs.extend(pattern_bugs)
 
         # 5. LLM-based deep analysis on suspicious files
-        if self.gemini_api_key:
+        if self.llm.is_configured():
             # Only send high-importance files to LLM (limit to top 10 by size)
             important_files = sorted(
                 file_contents.items(),
@@ -374,53 +377,43 @@ If no bugs found, respond with:
 NO_BUGS_FOUND"""
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.DEFAULT_MODEL}:generateContent?key={self.gemini_api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}
-            }
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            text = await self.llm.generate(prompt, temperature=0.1, max_tokens=2048)
+            if not text or "NO_BUGS_FOUND" in text:
+                return []
 
-                    if "NO_BUGS_FOUND" in text:
-                        return []
-
-                    for line in text.strip().splitlines():
-                        if line.startswith("BUG|"):
-                            parts = line.split("|")
-                            if len(parts) >= 7:
-                                sev_map = {
-                                    "critical": BugSeverity.CRITICAL,
-                                    "high": BugSeverity.HIGH,
-                                    "medium": BugSeverity.MEDIUM,
-                                    "low": BugSeverity.LOW
-                                }
-                                cat_map = {
-                                    "syntax_error": BugCategory.SYNTAX_ERROR,
-                                    "runtime_exception": BugCategory.RUNTIME_EXCEPTION,
-                                    "logic_error": BugCategory.LOGIC_ERROR,
-                                    "undefined_variable": BugCategory.UNDEFINED_VARIABLE,
-                                    "type_error": BugCategory.TYPE_ERROR,
-                                    "broken_import": BugCategory.BROKEN_IMPORT,
-                                }
-                                try:
-                                    bugs.append(DetectedBug(
-                                        bug_id=f"llm-{uuid.uuid4().hex[:8]}",
-                                        title=parts[5].strip(),
-                                        category=cat_map.get(parts[4].strip(), BugCategory.LOGIC_ERROR),
-                                        severity=sev_map.get(parts[3].strip(), BugSeverity.MEDIUM),
-                                        file_path=parts[1].strip(),
-                                        line_number=int(parts[2].strip()),
-                                        evidence="Detected via LLM code reasoning",
-                                        explanation=parts[6].strip() if len(parts) > 6 else "LLM-detected issue",
-                                        detection_method="llm",
-                                        confidence=0.7
-                                    ))
-                                except (ValueError, IndexError):
-                                    continue
+            for line in text.strip().splitlines():
+                if line.startswith("BUG|"):
+                    parts = line.split("|")
+                    if len(parts) >= 7:
+                        sev_map = {
+                            "critical": BugSeverity.CRITICAL,
+                            "high": BugSeverity.HIGH,
+                            "medium": BugSeverity.MEDIUM,
+                            "low": BugSeverity.LOW
+                        }
+                        cat_map = {
+                            "syntax_error": BugCategory.SYNTAX_ERROR,
+                            "runtime_exception": BugCategory.RUNTIME_EXCEPTION,
+                            "logic_error": BugCategory.LOGIC_ERROR,
+                            "undefined_variable": BugCategory.UNDEFINED_VARIABLE,
+                            "type_error": BugCategory.TYPE_ERROR,
+                            "broken_import": BugCategory.BROKEN_IMPORT,
+                        }
+                        try:
+                            bugs.append(DetectedBug(
+                                bug_id=f"llm-{uuid.uuid4().hex[:8]}",
+                                title=parts[5].strip(),
+                                category=cat_map.get(parts[4].strip(), BugCategory.LOGIC_ERROR),
+                                severity=sev_map.get(parts[3].strip(), BugSeverity.MEDIUM),
+                                file_path=parts[1].strip(),
+                                line_number=int(parts[2].strip()),
+                                evidence="Detected via LLM code reasoning",
+                                explanation=parts[6].strip() if len(parts) > 6 else "LLM-detected issue",
+                                detection_method="llm",
+                                confidence=0.7
+                            ))
+                        except (ValueError, IndexError):
+                            continue
         except Exception as e:
             logger.warning(f"LLM bug analysis failed: {e}")
 

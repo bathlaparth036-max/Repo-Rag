@@ -13,11 +13,14 @@ from app.core.logging import logger
 import httpx
 
 
+from app.core.llm import LLMClient
+
+
 class RegressionTestGenerator:
     """Generates regression tests for detected bugs."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
-        self.gemini_api_key = gemini_api_key or settings.GEMINI_API_KEY
+    def __init__(self, api_key: Optional[str] = None):
+        self.llm = LLMClient(api_key=api_key)
 
     async def generate_regression_test(
         self,
@@ -30,7 +33,7 @@ class RegressionTestGenerator:
         if not source_code:
             return None
 
-        if self.gemini_api_key:
+        if self.llm.is_configured():
             return await self._llm_generate_test(bug, source_code)
         else:
             return self._rule_based_test(bug, source_code)
@@ -71,35 +74,28 @@ Respond with ONLY the Python test code, no markdown fences or explanations.
 Start with the necessary imports."""
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.DEFAULT_MODEL}:generateContent?key={self.gemini_api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}
-            }
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            text = await self.llm.generate(prompt, temperature=0.1, max_tokens=2048)
+            if not text:
+                return self._rule_based_test(bug, source_code)
 
-                    # Clean up markdown fences if present
-                    test_code = text.strip()
-                    if test_code.startswith("```"):
-                        lines = test_code.splitlines()
-                        if lines[0].startswith("```"):
-                            lines = lines[1:]
-                        if lines and lines[-1].strip() == "```":
-                            lines = lines[:-1]
-                        test_code = "\n".join(lines)
+            # Clean up markdown fences if present
+            test_code = text.strip()
+            if test_code.startswith("```"):
+                lines = test_code.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                test_code = "\n".join(lines)
 
-                    if "def test_" in test_code:
-                        return TestCase(
-                            test_id=f"regtest-{uuid.uuid4().hex[:8]}",
-                            test_name=f"regression_test_{bug.bug_id}",
-                            file_path="test_regression_reporag.py",
-                            test_type="regression",
-                            source_code=test_code
-                        )
+            if "def test_" in test_code:
+                return TestCase(
+                    test_id=f"regtest-{uuid.uuid4().hex[:8]}",
+                    test_name=f"regression_test_{bug.bug_id}",
+                    file_path="test_regression_reporag.py",
+                    test_type="regression",
+                    source_code=test_code
+                )
         except Exception as e:
             logger.warning(f"LLM regression test generation failed: {e}")
 

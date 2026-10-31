@@ -28,10 +28,12 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[str] = None
 
     # LLM Settings
-    LLM_PROVIDER: str = "gemini"  # gemini, openai, local
+    LLM_PROVIDER: str = "grok"  # grok, gemini, openai, local
+    GROK_API_KEY: Optional[str] = None
+    XAI_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
-    DEFAULT_MODEL: str = "gemini-3.8-flash"
+    DEFAULT_MODEL: str = "grok-2-latest"
 
     # Vector DB / Embeddings
     VECTOR_DB_TYPE: str = "memory"  # memory, chroma

@@ -11,11 +11,14 @@ from app.core.logging import logger
 import httpx
 
 
+from app.core.llm import LLMClient
+
+
 class HypothesisEngine:
     """Generates root-cause hypotheses for each detected bug."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
-        self.gemini_api_key = gemini_api_key or settings.GEMINI_API_KEY
+    def __init__(self, api_key: Optional[str] = None):
+        self.llm = LLMClient(api_key=api_key)
 
     async def generate_hypotheses(
         self,
@@ -41,7 +44,7 @@ class HypothesisEngine:
                 content = file_contents[f][:1500]
                 related_snippets.append(f"--- {f} ---\n{content}")
 
-        if self.gemini_api_key:
+        if self.llm.is_configured():
             return await self._llm_generate_hypotheses(bug, context_lines, related_snippets)
 
         # Fallback: generate rule-based hypotheses
@@ -92,35 +95,28 @@ HYPOTHESIS|<root_cause>|<evidence>|<expected_behavior>|<why_problem_occurs>|<con
 
         hypotheses = []
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.DEFAULT_MODEL}:generateContent?key={self.gemini_api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}
-            }
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            text = await self.llm.generate(prompt, temperature=0.2, max_tokens=2048)
+            if not text:
+                return self._rule_based_hypotheses(bug, code_context)
 
-                    for line in text.strip().splitlines():
-                        if line.startswith("HYPOTHESIS|"):
-                            parts = line.split("|")
-                            if len(parts) >= 7:
-                                try:
-                                    hypotheses.append(RootCauseHypothesis(
-                                        hypothesis_id=f"hyp-{uuid.uuid4().hex[:8]}",
-                                        bug_id=bug.bug_id,
-                                        root_cause=parts[1].strip(),
-                                        evidence_from_code=parts[2].strip(),
-                                        affected_files=[bug.file_path] + bug.related_files[:3],
-                                        expected_behavior=parts[3].strip(),
-                                        why_problem_occurs=parts[4].strip(),
-                                        confidence=min(1.0, max(0.1, float(parts[5].strip()))),
-                                        validation_method=parts[6].strip()
-                                    ))
-                                except (ValueError, IndexError):
-                                    continue
+            for line in text.strip().splitlines():
+                if line.startswith("HYPOTHESIS|"):
+                    parts = line.split("|")
+                    if len(parts) >= 7:
+                        try:
+                            hypotheses.append(RootCauseHypothesis(
+                                hypothesis_id=f"hyp-{uuid.uuid4().hex[:8]}",
+                                bug_id=bug.bug_id,
+                                root_cause=parts[1].strip(),
+                                evidence_from_code=parts[2].strip(),
+                                affected_files=[bug.file_path] + bug.related_files[:3],
+                                expected_behavior=parts[3].strip(),
+                                why_problem_occurs=parts[4].strip(),
+                                confidence=min(1.0, max(0.1, float(parts[5].strip()))),
+                                validation_method=parts[6].strip()
+                            ))
+                        except (ValueError, IndexError):
+                            continue
         except Exception as e:
             logger.warning(f"LLM hypothesis generation failed: {e}")
 

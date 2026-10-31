@@ -26,11 +26,12 @@ class GroundedAnswer(BaseModel):
     model_used: str = "RepoRAG Grounded Intelligence"
 
 
+from app.core.llm import LLMClient
+
+
 class AnswerGenerator:
     def __init__(self):
-        self.provider = settings.LLM_PROVIDER
-        self.gemini_key = settings.GEMINI_API_KEY
-        self.openai_key = settings.OPENAI_API_KEY
+        self.llm = LLMClient()
 
     async def generate_answer(
         self,
@@ -70,22 +71,24 @@ class AnswerGenerator:
                 relevance_score=round(score, 2)
             ))
 
-        # Check if live Gemini API key is available
-        if self.gemini_key:
+        # Check if live LLM is configured (Grok, Gemini, OpenAI)
+        if self.llm.is_configured():
             try:
-                answer_text = await self._call_gemini(query, evidence_items, repo_metadata)
-                confidence = min(0.98, max(0.65, 0.5 + (len(evidence_items) * 0.08)))
-                return GroundedAnswer(
-                    query=query,
-                    answer=answer_text,
-                    evidence=evidence_items[:6],
-                    relevant_files=list(files_set),
-                    relevant_symbols=list(symbols_set),
-                    confidence=round(confidence, 2),
-                    model_used="Gemini 1.5 Grounded"
-                )
+                answer_text = await self._call_llm(query, evidence_items, repo_metadata)
+                if answer_text:
+                    confidence = min(0.98, max(0.65, 0.5 + (len(evidence_items) * 0.08)))
+                    provider_label = "Grok" if "grok" in self.llm.model.lower() or self.llm.provider == "grok" else "RepoRAG AI"
+                    return GroundedAnswer(
+                        query=query,
+                        answer=answer_text,
+                        evidence=evidence_items[:6],
+                        relevant_files=list(files_set),
+                        relevant_symbols=list(symbols_set),
+                        confidence=round(confidence, 2),
+                        model_used=f"{provider_label} ({self.llm.model}) Grounded"
+                    )
             except Exception as e:
-                logger.warning(f"Live Gemini call failed, falling back to local synthesizer: {e}")
+                logger.warning(f"Live LLM call failed, falling back to local synthesizer: {e}")
 
         # High-precision deterministic grounded synthesizer
         return self._synthesize_grounded_answer(query, evidence_items, repo_metadata, files_set, symbols_set)
@@ -140,9 +143,8 @@ class AnswerGenerator:
             model_used="RepoRAG Grounded Intelligence"
         )
 
-    async def _call_gemini(self, query: str, evidence: List[EvidenceItem], repo: Dict[str, Any]) -> str:
+    async def _call_llm(self, query: str, evidence: List[EvidenceItem], repo: Dict[str, Any]) -> Optional[str]:
         prompt_parts = [
-            "You are RepoRAG, a software repository intelligence AI.",
             f"Repository: {repo.get('full_name', 'Unknown')}",
             f"User Question: {query}",
             "\nRetrieved Code Evidence from indexed repository:"
@@ -158,13 +160,10 @@ class AnswerGenerator:
         prompt_parts.append("2. Cite exact file paths and symbols.")
         prompt_parts.append("3. If evidence is insufficient, explicitly state that.")
 
-        payload = {
-            "contents": [{"parts": [{"text": "\n".join(prompt_parts)}]}]
-        }
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.DEFAULT_MODEL}:generateContent?key={self.gemini_key}"
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(url, json=payload)
-            if resp.status_code == 200:
-                data = resp.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
-            raise RuntimeError(f"Gemini API returned status {resp.status_code}")
+        system_prompt = "You are RepoRAG, an advanced software repository intelligence AI."
+        return await self.llm.generate(
+            prompt="\n".join(prompt_parts),
+            system_prompt=system_prompt,
+            temperature=0.2,
+            max_tokens=2048
+        )
