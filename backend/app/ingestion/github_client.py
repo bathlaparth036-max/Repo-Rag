@@ -21,6 +21,8 @@ class GitHubClient:
     def parse_repo_url(url: str) -> Tuple[str, str]:
         """Extracts owner and repo name from a GitHub URL."""
         cleaned = url.strip().rstrip("/")
+        if cleaned.lower() in ("demo", "local", "demo-buggy-repo", "demo-repo") or cleaned.lower().endswith("demo-buggy-repo"):
+            return "demo", "demo-buggy-repo"
         # Matches https://github.com/owner/repo or github.com/owner/repo or owner/repo
         match = re.search(r"(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/]+)", cleaned)
         if match:

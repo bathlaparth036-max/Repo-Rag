@@ -32,7 +32,7 @@ class RepositoryCloner:
             logger.warning(f"git ls-remote check failed for {owner}/{repo}: {e}")
             return False
 
-    async def clone_repository(self, owner: str, repo: str) -> Tuple[str, str]:
+    async def clone_repository(self, owner: str, repo: str, branch: Optional[str] = None) -> Tuple[str, str]:
         """
         Performs a shallow clone (--depth 1) of the public GitHub repository.
         Returns: (repo_dir, default_branch)
@@ -40,6 +40,25 @@ class RepositoryCloner:
         repo_slug = f"{owner}--{repo}".lower()
         target_dir = os.path.join(self.base_cache_dir, repo_slug)
         url = f"https://github.com/{owner}/{repo}.git"
+
+        # Check for local demo repository
+        if owner.lower() in ("demo", "local") and "demo" in repo.lower():
+            workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+            local_demo = os.path.join(workspace_root, "demo-buggy-repo")
+            if os.path.exists(local_demo):
+                logger.info(f"Using local demo repository from {local_demo}")
+                if os.path.exists(target_dir):
+                    shutil.rmtree(target_dir, ignore_errors=True)
+                shutil.copytree(local_demo, target_dir, ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache', '.git'))
+                subprocess.run(["git", "init"], cwd=target_dir, capture_output=True)
+                subprocess.run(["git", "add", "."], cwd=target_dir, capture_output=True)
+                subprocess.run(
+                    ["git", "commit", "-m", "Initial commit for demo-buggy-repo", "--allow-empty"],
+                    cwd=target_dir, capture_output=True,
+                    env={**os.environ, "GIT_AUTHOR_NAME": "Demo", "GIT_AUTHOR_EMAIL": "demo@reporag.dev",
+                         "GIT_COMMITTER_NAME": "Demo", "GIT_COMMITTER_EMAIL": "demo@reporag.dev"}
+                )
+                return target_dir, "main"
 
         # If repo is already cloned, refresh it or reuse
         if os.path.exists(target_dir) and os.path.isdir(os.path.join(target_dir, ".git")):
@@ -49,8 +68,12 @@ class RepositoryCloner:
                 shutil.rmtree(target_dir, ignore_errors=True)
 
             logger.info(f"Cloning {url} into {target_dir} with depth 1...")
+            clone_cmd = ["git", "clone", "--depth", "1"]
+            if branch:
+                clone_cmd.extend(["-b", branch])
+            clone_cmd.extend([url, target_dir])
             proc = await asyncio.create_subprocess_exec(
-                "git", "clone", "--depth", "1", url, target_dir,
+                *clone_cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

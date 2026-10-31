@@ -60,10 +60,26 @@ def health():
 # Include central API
 app.include_router(api_router)
 
-# Mount frontend production build directly on root
+# Mount frontend production build — use a custom class to avoid catching /api/* paths
 frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists() and (frontend_dist / "index.html").exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+    from starlette.responses import FileResponse
+
+    class SPAStaticFiles(StaticFiles):
+        """Serves static files and falls back to index.html for SPA routing,
+        but ONLY for non-API paths to avoid intercepting backend routes."""
+        async def get_response(self, path: str, scope):
+            try:
+                response = await super().get_response(path, scope)
+                if response.status_code != 404:
+                    return response
+            except Exception:
+                pass
+            # Fallback: serve index.html for SPA client-side routing
+            return FileResponse(str(frontend_dist / "index.html"))
+
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="static-assets")
+    app.mount("/", SPAStaticFiles(directory=str(frontend_dist), html=False), name="frontend")
 else:
     @app.get("/")
     def fallback_root():

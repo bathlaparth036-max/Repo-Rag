@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { Search, Sparkles, ArrowRight, GitBranch, Shield, Zap, AlertCircle, Key } from "lucide-react";
+import { Search, Sparkles, ArrowRight, GitBranch, Shield, Zap, AlertCircle, Key, Wrench } from "lucide-react";
 import { api } from "../services/api";
 
 interface HeroInputProps {
   onAnalyzeSuccess: (repoId: string) => void;
   onExploreDemo: () => void;
+  onGoToRepair?: () => void;
 }
 
 export const HeroInput: React.FC<HeroInputProps> = ({
   onAnalyzeSuccess,
-  onExploreDemo
+  onExploreDemo,
+  onGoToRepair
 }) => {
   const [url, setUrl] = useState("");
   const [token, setToken] = useState(localStorage.getItem("reporag_github_token") || "");
@@ -195,21 +197,30 @@ export const HeroInput: React.FC<HeroInputProps> = ({
         )}
       </div>
 
-      {/* Quick Demo Button */}
+      {/* Quick Demo & Repair Buttons */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <span className="text-xs text-slate-500 font-mono">Or explore instantly:</span>
+        <span className="text-xs text-slate-500 font-mono">Quick exploration:</span>
         <button
           onClick={onExploreDemo}
           disabled={loading}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-card hover:bg-cardBorder border border-cardBorder text-slate-300 hover:text-white text-xs font-mono transition"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-card hover:bg-cardBorder border border-cardBorder text-slate-300 hover:text-white text-xs font-mono transition cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5 text-accent-cyan" />
           <span>reporag-demo/nexus-platform (Full-Stack AI)</span>
         </button>
+
+        <button
+          onClick={onGoToRepair}
+          disabled={loading}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 text-accent-cyan text-xs font-mono transition cursor-pointer"
+        >
+          <Wrench className="w-3.5 h-3.5 text-accent-cyan" />
+          <span>Launch Autonomous Repair Agent</span>
+        </button>
       </div>
 
       {/* Value Pillars */}
-      <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full text-left">
+      <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl w-full text-left">
         <div className="p-4 rounded-xl bg-card/60 border border-cardBorder/60">
           <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 flex items-center justify-center text-accent-cyan mb-3">
             <GitBranch className="w-4 h-4" />
@@ -237,6 +248,16 @@ export const HeroInput: React.FC<HeroInputProps> = ({
           <h2 className="text-sm font-semibold text-white mb-1">Grounded Zero-Hallucination RAG</h2>
           <p className="text-xs text-slate-400 leading-relaxed">
             Every answer is anchored by exact file paths, line ranges, AST symbols, and confidence scores.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-card/60 border border-cardBorder/60">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-3">
+            <Wrench className="w-4 h-4" />
+          </div>
+          <h2 className="text-sm font-semibold text-white mb-1">Autonomous Software Repair</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Multi-strategy bug detection, root-cause hypothesis generation, sandboxed test execution, and verified regression-free patches.
           </p>
         </div>
       </div>

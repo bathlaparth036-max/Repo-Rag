@@ -135,5 +135,53 @@ export const api = {
       method: "DELETE",
     });
     return res.json();
-  }
+  },
+
+  // ─── Autonomous Repair API ────────────────────────────────
+  async startRepair(url: string, token?: string, branch?: string): Promise<{ job_id: string; repository_url: string; message: string }> {
+    const res = await fetch(`${API_BASE}/repair/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, token: token || undefined, branch: branch || undefined }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Failed to start repair");
+    }
+    return res.json();
+  },
+
+  async getRepairStatus(jobId: string) {
+    const res = await fetch(`${API_BASE}/repair/status/${jobId}`);
+    if (!res.ok) throw new Error("Could not fetch repair status");
+    return res.json();
+  },
+
+  async getRepairReport(jobId: string) {
+    const res = await fetch(`${API_BASE}/repair/report/${jobId}`);
+    if (!res.ok) {
+      if (res.status === 202) return null; // Still in progress
+      throw new Error("Report not available");
+    }
+    return res.json();
+  },
+
+  async getRepairReportMarkdown(jobId: string): Promise<string> {
+    const res = await fetch(`${API_BASE}/repair/report/${jobId}/markdown`);
+    if (!res.ok) throw new Error("Report not available");
+    return res.text();
+  },
+
+  async getRepairDashboard() {
+    const res = await fetch(`${API_BASE}/repair/dashboard`);
+    if (!res.ok) throw new Error("Dashboard unavailable");
+    return res.json();
+  },
+
+  async listRepairJobs() {
+    const res = await fetch(`${API_BASE}/repair/jobs`);
+    if (!res.ok) throw new Error("Could not list repair jobs");
+    return res.json();
+  },
 };
+

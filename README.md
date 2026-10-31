@@ -1,25 +1,26 @@
-# RepoRAG — AI-Powered GitHub Repository Intelligence Platform
+# RepoRAG — Autonomous Software Repair Agent & AI-Powered Repository Intelligence
 
 <p align="center">
   <code style="font-size: 24px; font-weight: bold; color: #00f2fe;">&lt; ◉ &gt; RepoRAG</code><br>
-  <b>"Understand Any Repository. Ask Anything."</b><br>
-  <i>Your Codebase. Indexed. Understood. Intelligent.</i>
+  <b>"Understand Any Repository. Detect Bugs. Fix Them Autonomously."</b><br>
+  <i>Your Codebase. Indexed. Analyzed. Repaired.</i>
 </p>
 
 ---
 
 ## 🌟 Overview
 
-RepoRAG turns any public or token-authenticated GitHub repository into an interactive, deeply indexed intelligence graph with hybrid retrieval-augmented generation (RAG), visual architecture diagrams (Archify), an interactive Git timeline, codebase health telemetry, and a full-featured Chrome extension side-panel and GitHub web integration.
+RepoRAG is an **Autonomous Software Repair Agent** that combines deep repository intelligence with automated bug detection, root-cause analysis, code patching, testing, and verification. Built on top of a full-featured RAG intelligence platform, it can analyze any public GitHub repository, detect bugs using multi-strategy analysis (AST, static analysis, LLM reasoning), generate and test multiple candidate fixes, and select the best verified solution — all autonomously.
 
-Paste any repository URL (e.g. `https://github.com/facebook/react` or `https://github.com/owner/repository`) and RepoRAG will automatically:
-1. **Validate and Ingest** the repository hierarchy and commits.
-2. **Scan & Parse** source code files with multi-language AST symbol extractors (Python, JS, TS, Java, Go, Rust, C/C++).
-3. **Analyze Package Manifests** (`package.json`, `requirements.txt`, `pom.xml`, `go.mod`, `Cargo.toml`).
-4. **Construct Knowledge Graphs** mapping repositories, files, classes, methods, endpoints, and calls.
-5. **Generate Archify Diagrams** using dynamic Mermaid.js visualizations (System, Modules, Dependencies, Data Flow, Auth Flow, and Database).
-6. **Power Grounded RAG Inquiries** with 4-way hybrid search (Vector + BM25 + Symbol + Filepath) and strict evidence attribution.
-7. **Evaluate Codebase Health & Security** with blast-radius change impact analysis.
+**Core Capabilities:**
+1. **Repository Intelligence** — Clone, scan, parse, and index entire codebases with multi-language AST parsing
+2. **Autonomous Bug Detection** — 5-strategy pipeline: Python AST syntax validation, import verification, pattern matching, ruff static analysis, Gemini LLM reasoning
+3. **Root-Cause Hypothesis Generation** — 2-3 hypotheses per bug with evidence and confidence levels
+4. **AI Solution Generation** — LLM-generated code patches with unified diffs
+5. **Isolated Patch Testing** — Apply patches to working copies, run tests (pytest/npm), compare before/after
+6. **Evidence-Based Selection** — Score and rank solutions, select the best verified fix
+7. **Regression Test Generation** — Create tests that prove the fix works
+8. **Comprehensive Reporting** — Downloadable JSON/Markdown reports with full audit trail
 
 ---
 
@@ -27,15 +28,18 @@ Paste any repository URL (e.g. `https://github.com/facebook/react` or `https://g
 
 | Capability | Description |
 | :--- | :--- |
-| **Grounded AI RAG** | Natural-language questions answered strictly from retrieved code chunks with verifiable file citations and confidence scores. |
-| **Archify Engine** | Instant visual software architecture generation across 7 views with zoom, pan, and SVG export. |
-| **Interactive Source Tree** | Virtualized folder tree, language indicators, file complexity, and AI centrality metrics. |
-| **Knowledge Graph** | 2D node-edge relationship visualizer connecting files, classes, functions, APIs, and commits. |
-| **Git GUI & Churn Timeline** | Commit timeline, author statistics, branch viewer, and changed file inspection. |
-| **Change Impact Engine** | Calculate blast radius, affected APIs, and regression risk before touching code. |
-| **Security Pattern Scan** | Static heuristic analysis identifying hardcoded secrets, unsafe eval, and SQL patterns. |
-| **New Developer Mode** | AI-generated onboarding guides detailing spin-up steps, main logic, and common pitfalls. |
-| **Chrome Extension (MV3)** | Floating badge directly on GitHub repositories + Chrome Side Panel integration. |
+| **🔧 Autonomous Repair** | 10-stage pipeline: clone → analyze → detect bugs → hypothesize → generate solutions → apply patches → run tests → evaluate → select best → generate report |
+| **🐛 Multi-Strategy Bug Detection** | AST syntax validation, import checking, pattern matching (division by zero, bare except, mutable defaults), ruff static analysis, and Gemini LLM code reasoning |
+| **🧪 Isolated Test Execution** | Tests run in subprocess or Docker containers with timeout protection, resource limits, and no network access |
+| **📊 Repair Dashboard** | Real-time progress tracking, live metrics, diff viewer with syntax highlighting, test comparison (before/after) |
+| **Grounded AI RAG** | Natural-language questions answered strictly from retrieved code chunks with verifiable file citations and confidence scores |
+| **Archify Engine** | Instant visual software architecture generation across 7 views with zoom, pan, and SVG export |
+| **Interactive Source Tree** | Virtualized folder tree, language indicators, file complexity, and AI centrality metrics |
+| **Knowledge Graph** | 2D node-edge relationship visualizer connecting files, classes, functions, APIs, and commits |
+| **Git GUI & Churn Timeline** | Commit timeline, author statistics, branch viewer, and changed file inspection |
+| **Change Impact Engine** | Calculate blast radius, affected APIs, and regression risk before touching code |
+| **Security Pattern Scan** | Static heuristic analysis identifying hardcoded secrets, unsafe eval, and SQL patterns |
+| **New Developer Mode** | AI-generated onboarding guides detailing spin-up steps, main logic, and common pitfalls |
 
 ---
 
@@ -131,9 +135,10 @@ All 7 test suites verify:
 ---
 
 ## 📄 Documentation Links
+- [Setup Guide](SETUP.md)
 - [Architecture Blueprint](docs/architecture.md)
+- [Requirements Audit](REQUIREMENTS_AUDIT.md)
 - [RAG Retrieval & Grounding](docs/rag.md)
 - [Repository Ingestion Engine](docs/ingestion.md)
-- [Chrome Extension Guide](docs/extension.md)
 - [API Specification](docs/api.md)
 - [Security & Privacy](docs/security.md)

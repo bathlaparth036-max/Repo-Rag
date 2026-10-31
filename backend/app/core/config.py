@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"  # gemini, openai, local
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
-    DEFAULT_MODEL: str = "gemini-1.5-flash"
+    DEFAULT_MODEL: str = "gemini-3.8-flash"
 
     # Vector DB / Embeddings
     VECTOR_DB_TYPE: str = "memory"  # memory, chroma

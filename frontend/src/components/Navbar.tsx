@@ -1,6 +1,6 @@
 import React from "react";
 import { RepositoryIntelligence } from "../types";
-import { Terminal, Sparkles, Command, ShieldAlert, Cpu, GitBranch } from "lucide-react";
+import { Terminal, Sparkles, Command, ShieldAlert, Cpu, GitBranch, Wrench } from "lucide-react";
 
 const GithubIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -15,6 +15,7 @@ interface NavbarProps {
   onReset: () => void;
   isSidepanelMode: boolean;
   onToggleSidepanelMode: () => void;
+  onOpenRepair?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,7 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLoadDemo,
   onReset,
   isSidepanelMode,
-  onToggleSidepanelMode
+  onToggleSidepanelMode,
+  onOpenRepair
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-cardBorder bg-background/90 backdrop-blur-md">
@@ -74,10 +76,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline">Cmd + K</span>
           </button>
 
+          <button
+            onClick={onOpenRepair}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 text-accent-cyan text-xs font-medium transition cursor-pointer"
+            title="Open Autonomous Software Repair Agent"
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Auto Repair</span>
+          </button>
+
           {!currentRepo && (
             <button
               onClick={onLoadDemo}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-medium shadow-md shadow-indigo-500/20 transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-medium shadow-md shadow-indigo-500/20 transition cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Explore Demo</span>
